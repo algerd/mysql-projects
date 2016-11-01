@@ -1,0 +1,20 @@
+ В консоли cmd.
+1) Дамп БД в один текстовый файл:
+ 1. перенаправить консоль в папку, куда будет делаться дамп бд:
+	C:\Users\Александр>d:    ввод  - перенаправляем на диск D
+	D:\>cd D:\backup_sql     ввод  - перенаправляем в папку backup_sql
+ 2. сохраняем дамп в файле backup_league.sql 
+	D:\backup_sql> mysqldump -uroot -ppassword league > backup_league.sql   (password = algerd)
+	
+Восстановление БД из дамп-файла.
+ 1. создаём новую бд (вредакторе navicat или в консоли):
+	DROP DATABASE IF EXISTS league;
+	CREATE DATABASE league CHARACTER SET utf8 COLLATE utf8_general_ci;
+ 2. перенаправляем консоль в папку с дамп-файлом (см. выше п1) 
+ 3 . вызываем дамп-файл:
+	D:\backup_sql> mysql -uroot -ppassword league < backup_league.sql
+	
+	
+2) Дамп БД в отдельные файлы в папку backup_league, соответствующие таблицам и данным таблиц (в случае если бд большая)
+	D:\backup_sql> mysqldump -uroot -ppassword -Т d:\backup_sql\backup_league league
+	Восстановление из папки ?

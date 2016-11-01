@@ -1,0 +1,22 @@
+﻿
+Использовать функции для изменений данных бд небезопасно, для этих целей надо использовать процедуры.
+Функции надо делать для получения(возврата) результата операций, не связанных с изменением данных бд, например математические операции.
+И тогда в заголовке функции надо прописывать DETERMINISTIC или READS SQL DATA, что значит без изменения данных.
+Можно изменить глобальную переменную log_bin_trust_function_creators на 1 чтобы изменять данные в бд, но это неправильно, потому что небезопасно.
+
+SET GLOBAL log_bin_trust_function_creators = 1; -- если функция будет изменять данные бд
+DROP FUNCTION IF EXISTS updateClubs;
+DELIMITER $$
+CREATE FUNCTION updateClubs(
+						loc_id INT,
+						loc_users_id INT,
+						loc_name VARCHAR(100),
+						loc_description TEXT)
+	RETURNS VARCHAR(100)
+	DETERMINISTIC       -- если функция не будет изменять данные бд и тогда не надо устанавливать log_bin_trust_function_creators = 1
+	READS SQL DATA      -- если функция не будет изменять данные бд и тогда не надо устанавливать log_bin_trust_function_creators = 1
+	BEGIN
+	
+Функции широко используют в sql-запросах и подзапросах :
+	SELECT id FROM users
+		WHERE age < fn_min_age();

@@ -1,0 +1,232 @@
+SELECT
+    [ALL | DISTINCT | DISTINCTROW ]
+    [HIGH_PRIORITY]
+    [STRAIGHT_JOIN]
+    [SQL_SMALL_RESULT | SQL_BIG_RESULT | SQL_BUFFER_RESULT]
+    [SQL_CACHE | SQL_NO_CACHE] 
+    [SQL_CALC_FOUND_ROWS]
+    select_expr [, select_expr ...]
+        [FROM table_references
+            [PARTITION (partition_names)] 
+            [[AS] alias]
+
+JOIN:       [
+                [INNER | CROSS] JOIN table_factor [PARTITION (partition_names)] [[AS] alias] [join_condition]
+                | STRAIGHT_JOIN table_factor
+                | STRAIGHT_JOIN table_factor ON conditional_expr
+                | {LEFT|RIGHT} [OUTER] JOIN table_reference join_condition
+                | NATURAL [{LEFT|RIGHT} [OUTER]] JOIN table_factor
+
+                ON conditional_expr
+                | USING (column_list)
+
+                index_hint [, index_hint] ...
+                USE {INDEX|KEY}
+                    [FOR {JOIN|ORDER BY|GROUP BY}] ([index_list])
+                | IGNORE {INDEX|KEY}
+                    [FOR {JOIN|ORDER BY|GROUP BY}] (index_list)
+                | FORCE {INDEX|KEY}
+                    [FOR {JOIN|ORDER BY|GROUP BY}] (index_list)
+            ]    
+
+            [WHERE where_condition]
+            [GROUP BY {col_name | expr | position}[ASC | DESC], ... [WITH ROLLUP]]
+            [HAVING where_condition]
+            [ORDER BY {col_name | expr | position}[ASC | DESC], ...]
+            [LIMIT {[offset,] row_count | row_count OFFSET offset}]
+            [PROCEDURE procedure_name(argument_list)]
+            [INTO OUTFILE 'file_name'
+                [CHARACTER SET charset_name]
+                export_options
+                | INTO DUMPFILE 'file_name'
+                | INTO var_name [, var_name]
+            ]
+            [FOR UPDATE | LOCK IN SHARE MODE]
+        ]
+
+UNION:
+
+SELECT ...
+UNION [ALL | DISTINCT]
+SELECT ...
+[UNION [ALL | DISTINCT]
+SELECT ...]
+
+
+table_references -  Конструкция table_references(табличные ссылки) перечисляет таблицы, 
+из которых извлекаются строки. Если вы указываете более чем одну таблицу, выполняется JOIN объединение 
+таблиц по указанным правилам JOIN.
+select_expr - column_name или Select Expression колонок
+
+Examples:
+
+SELECT CONCAT(last_name,', ',first_name) AS full_name
+    FROM mytable ORDER BY full_name;
+
+SELECT college, region AS r, seed AS s 
+    FROM tournament
+        ORDER BY r, s;
+
+SELECT a, COUNT(b) 
+    FROM test_table 
+    GROUP BY a 
+    ORDER BY NULL;
+
+SELECT COUNT(col1) AS col2 
+    FROM t 
+    GROUP BY col2 
+    HAVING col2 = 2;
+
+SELECT user, MAX(salary) 
+    FROM users
+    GROUP BY user 
+    HAVING MAX(salary) > 10;
+
+SELECT * FROM tbl LIMIT 5,10;
+
+SELECT * FROM t1 
+    LEFT JOIN (t2, t3, t4) ON (t2.a=t1.a AND t3.b=t1.b AND t4.c=t1.c);
+
+SELECT t1.name, t2.salary FROM employee AS t1, info AS t2
+  WHERE t1.name = t2.name;
+SELECT t1.name, t2.salary FROM employee t1, info t2
+  WHERE t1.name = t2.name;
+
+SELECT e.id AS 'Employee ID', CONCAT(e.fname, ' ', e.lname) AS Name, s.city AS City, d.name AS department
+    FROM employees PARTITION (p0) AS e
+    JOIN stores PARTITION (p1) AS s ON e.store_id=s.id
+    JOIN departments PARTITION (p0) AS d ON e.department_id=d.id;
+
+SELECT left_tbl.*
+  FROM left_tbl LEFT JOIN right_tbl ON left_tbl.id = right_tbl.id
+  WHERE right_tbl.id IS NULL;
+
+SELECT * FROM table1, table2;
+SELECT * FROM table1 INNER JOIN table2 ON table1.id=table2.id;
+SELECT * FROM table1 LEFT JOIN table2 ON table1.id=table2.id;
+SELECT * FROM table1 LEFT JOIN table2 USING (id);
+SELECT * FROM table1 LEFT JOIN table2 ON table1.id=table2.id
+    LEFT JOIN table3 ON table2.id=table3.id;
+
+SELECT * FROM t1
+    LEFT JOIN t2 ON t1.id = t2.id
+UNION
+SELECT * FROM t1
+    RIGHT JOIN t2 ON t1.id = t2.id;
+
+
+Порядок разложения выражения Select на части:
+
+    Массив элементов класса Select:
+1.SELECT                                // const
+2.DISTINCT                              // const
+3.PRIORITY                              // const
+4.STRAIGHT_JOIN                         // const
+5.RESULT                                // const
+6.CACHE                                 // const
+7.SQL_CALC_FOUND_ROWS                   // const
+8.select_expr [, select_expr ...]       // object SelectColumns 
+9.FROM table_references                 // object From             
+10.JOIN                                 // object JoinContainer (контейнер объектов Join)    
+11.WHERE where_condition                // object Where
+12.GROUP BY                             // object Group
+13.HAVING where_condition               // object Having
+14.ORDER BY                             // object Order
+15.LIMIT
+16.PROCEDURE
+17.INTO OUTFILE
+18.FOR UPDATE | LOCK IN SHARE MODE
+
+19. UNION ???
+
+
+select_expr [, select_expr ...] :
+ - массив: [колонка => альяс]
+ - массив: [колонка1, колонка2]
+ - массив: [колонка1, колонка2 => альяс]
+ - массив: [Expression, колонка1, колонка2 => альяс]
+Ключ колонки массива может быть в виде строки выражения 'count(age)'?
+addColumnExpression('count(age)', 'альяс');
+addColumn('cokumn', 'альяс')
+Формат записи колонок table.column AS clmn
+
+table_references:
+ - строка: имя таблицы
+ - массив: [таблица => альяс]
+ - массив: [таблица1, таблица2]
+ - массив: [таблица1, таблица2 => альяс]
+Формат записи имён таблиц:  schema.table или tbl
+
+Проблема: альяс имени таблицы должен подставляться у имени столбцов:
+
+SELECT t1.name, t2.salary FROM employee AS t1, info AS t2;
+
+Но логика не определит сама к какой таблице принадлежит столбец, поэтому пользователь должен сам прописывать таблицу колонки.
+И тогда колонке надо задавать 3 значения: колонка, альяс, таблица(альяс):
+addColumn('колонка', 'альяс', таблица(альяс))
+
+
+
+
+В Zend\Select имя колонки склеивается с именем from таблицы:
+columns(array $columns, $prefixColumnsWithTable = true);
+В processSelect()
+$fromTable = $this->quoteIdentifier($alias) || $this->quoteIdentifier($schema) . '.' . $table || $this->quoteIdentifier($table)
+if($prefixColumnsWithTable) $columnName = $fromTable . $this->quoteIdentifier($column);
+Не допускается from нескольких таблиц и соответственно склейка колонок с другими таблицами.
+С помощью join можно передать имена колонок приклеваемой таблицы. 
+Фактичекси надо метод Select::processSelect() разбить на 3 части:
+классы Тable, Columns и Join и передавать объекты Тable и Join в объект Columns.
+1.Из объекта Тable берётся имя или альяс таблицы для склейки с колонками Select.
+2.Из объекта Join берётся список колонок присоединяемой таблицы и мерджится со списком колонок Select.
+
+SELECT users.login, clubs.name, 
+    FROM clubs
+    INNER JOIN users ON clubs.users_id = users.id  
+        WHERE clubs.id = 10;
+
+$select->from('clubs');
+$select->columns(['name'], true);
+$select->join('users')->on('clubs.users_id = users.id')->columns('login', true); // select->join() return Join
+
+А можно через вручную созданный объект Join:
+$join1 = new Join('users');
+$join1->on('clubs.users_id = users.id')
+    ->columns('login', true);
+$select->join([$join1, $join2 ...]);
+
+join может быть несколько, поэтому надо создавать дополнительный класс JoinContainer, 
+в котором будут храниться и собираться встроку объекты класса Join
+
+Объекты Тable и JoinСontainer надо передавать в Columns
+
+SELECT * FROM table1 
+    JOIN table2 ON table1.id=table2.id;
+SELECT * FROM table1 
+    JOIN table2 USING (id);
+
+SELECT * FROM table1 
+    JOIN table2 ON table1.id=table2.id
+    JOIN table2 USING (id);
+
+
+Join:
+    protected $keywords = array(
+        'join'=> self::TYPE_JOIN,
+        'table'=> null,
+        'on'=> null,
+        'using'=> null,		
+);	
+
+InnerJoin extends Join:
+    const TYPE_JOIN = 'INNER JOIN';
+Или передавать через конструктор тип джойна.
+
+
+SELECT * FROM t1 
+    LEFT JOIN (t2, t3, t4) ON (t2.a=t1.a AND t3.b=t1.b AND t4.c=t1.c)
+Это то же самое что и :
+SELECT * FROM t1 
+    LEFT JOIN t2 ON t2.a=t1.a
+    LEFT JOIN t3 ON t3.b=t1.b
+    LEFT JOIN t4 ON t4.c=t1.c

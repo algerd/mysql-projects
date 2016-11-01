@@ -1,0 +1,125 @@
+INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name,...)] 
+    [(col_name,...)]
+    {VALUES | VALUE} ({expr | DEFAULT},...),(...),...
+    [ ON DUPLICATE KEY UPDATE
+      col_name=expr
+        [, col_name=expr] ... ]
+Or:
+
+INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name,...)]
+    SET col_name={expr | DEFAULT}, ...
+    [ ON DUPLICATE KEY UPDATE
+      col_name=expr
+        [, col_name=expr] ... ]
+Or:
+
+INSERT [LOW_PRIORITY | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name,...)] 
+    [(col_name,...)]
+    SELECT ...
+    [ ON DUPLICATE KEY UPDATE
+      col_name=expr
+        [, col_name=expr] ... ]
+
+
+INSERT DELAYED is deprecated (не использовать DELAYED)
+
+
+INSERT tbl_name (col1,col2) VALUES(15,col1*2); ???
+INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
+INSERT INTO tbl_name (a,b,c) VALUES(1,2,3),(4,5,6),(7,8,9);
+
+INSERT INTO tbl_name SET col1 = 15, col2 = col1*2
+
+INSERT INTO tbl_temp2 (fld_id)
+    SELECT tbl_temp1.fld_order_id
+        FROM tbl_temp1 WHERE tbl_temp1.fld_order_id > 100;
+INSERT INTO t2 (b, c)
+    VALUES ((SELECT a FROM t1 WHERE b='Chip'), 'shoulder'),
+        ((SELECT a FROM t1 WHERE b='Chip'), 'old block'),
+        ((SELECT a FROM t1 WHERE b='John'), 'toilet'),
+        ((SELECT a FROM t1 WHERE b='John'), 'long,silver'),
+        ((SELECT a FROM t1 WHERE b='John'), 'li''l');
+
+INSERT INTO table (a,b,c) VALUES (1,2,3)
+  ON DUPLICATE KEY UPDATE c=c+1;
+(ON DUPLICATE KEY UPDATE c=c+1;  ---> UPDATE table SET c=c+1 WHERE a=1;)
+
+
+
+--Добавление в таблицу 	test ряда с указанными значениями в порядке, в котором была создана таблица
+INSERT INTO test 
+	VALUES (NULL, 'Tовар1', 123),	-- id не указан(NULL), поэтому он сам сформируется если у него есть AUTO_INCREMENT. Но можно его задать, напр. 23.
+		(NULL, 'Tовар2', 123),
+		(NULL, 'Tовар3', 123);
+	
+	
+--Добавление в таблицу 	test
+INSERT INTO test (name, price)
+	VALUES ('Товар1', 123.5),	-- значения неуказанных полей примут значения NOT NULL	DEFAULT (если его нет то NULL)
+		('Tовар2', 123),
+		('Tовар3', 123);
+	
+	
+--Добавление в таблицу 	test ряда с указанными значениями в порядке, в котором была создана таблица
+INSERT IGNORE INTO test 
+	VALUES (12, 'Tовар1', 123),	-- если id=12 уже есть то эта запись игнорируется IGNORE(пропускается), а остальные вставляются. Без IGNORE все записи после ошибочной проигнорируются.
+		(23, 'Tовар2', 123),
+		(24, 'Tовар3', 123);	
+
+--для задания приоритета выполнения запроса можно задать 
+INSERT LOW_PRIORITY [или DELAYED или HIGH_PRIORITY] IGNORE INTO test VALUES .....;
+
+
+// Полные варианты INSERT - выражений
+
+INSERT HIGH_PRIORITY IGNORE INTO tbl_name
+    PARTITION (partition_name,...) 
+    (col_name,...)
+    VALUES ({expr | DEFAULT},...),(...),...
+    ON DUPLICATE KEY UPDATE
+      col_name=expr
+     [, col_name=expr] ... 
+Or:
+
+INSERT HIGH_PRIORITY IGNORE 
+    INTO tbl_name
+    PARTITION (partition_name,...)
+    SET col_name={expr | DEFAULT}, ...
+    ON DUPLICATE KEY UPDATE
+      col_name=expr
+        [, col_name=expr] ... 
+Or:
+
+INSERT HIGH_PRIORITY IGNORE
+    INTO tbl_name
+    PARTITION (partition_name,...)
+    (col_name,...)
+    SELECT ...
+    ON DUPLICATE KEY UPDATE
+      col_name=expr
+        [, col_name=expr] ... 
+
+Порядок разложения выражения INSERT на части
+
+Массив элементов класса Insert:
+1. INSERT
+2. PRIORITY
+3. IGNORE
+4. INTO tbl_name
+5. PARTITION (partition_name,...) 
+6. (col_name,...)
+7. 1) VALUES ({expr | DEFAULT},...),(...),...
+   2) SET col_name={expr | DEFAULT}, ...
+   3) SELECT ...
+8. ON DUPLICATE KEY UPDATE col_name=expr [, col_name=expr]
+   
+В 7-й элемент массива заносится либо 1), либо 2), либо 3) - только один элемент
+
+7.1, 7.2, 7.3 можно представить как отдельные свойства-объекты???
+
